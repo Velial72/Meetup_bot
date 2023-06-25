@@ -75,6 +75,7 @@ def check_user(tg_id): # проверяет записан ли пользова
 
 def find_speaker(): # находит имя спикера по времени
     cursor.execute(f"SELECT user_id FROM bot_speaker WHERE start_date == '{now_time()}:00';")
+    # cursor.execute(f"SELECT user_id FROM bot_speaker WHERE start_date == '{now_time()}:00';")
     name_of_speaker = cursor.fetchone()
     return name_of_speaker[0]
 
@@ -109,14 +110,14 @@ def send_question(guest: str, speaker: str, message: str): # добавляет 
 
 @bot.message_handler(content_types=['text']) # Пришли сообщение чтобы начать
 def start(message):
-    print(message)
-    if message.from_user.username == 'AbRamS040':
+    # print(message)
+    if message.from_user.username == find_speaker(): #Konstantin_Derienko
         markup = types.InlineKeyboardMarkup(row_width=1)
         timeline = types.InlineKeyboardButton('График выступлений', callback_data='timeline2')
         markup.add(timeline)
         bot.send_message(message.chat.id, '\nпосмотрим расписание?\n', reply_markup=markup)
 
-    elif message.from_user.first_name == 'Антон': # and get_name(message) == 'True': # добавить сравнение времени спикера и текущего времени
+    elif message.from_user.first_name == 'Константин': # and get_name(message) == 'True': # добавить сравнение времени спикера и текущего времени
         markup = types.InlineKeyboardMarkup(row_width=1)
         questions = types.InlineKeyboardButton('Вопросы слушателей', callback_data='questions')
         timeline = types.InlineKeyboardButton('График выступлений', callback_data='timeline')
@@ -238,7 +239,7 @@ class Command(BaseCommand):
     help = 'телеграм бот собраний'
 
     def handle(self, *args, **options):
-        print(bot.get_me())
+        # print(bot.get_me())
         while True:
             try:
                 bot.polling(none_stop=True)
