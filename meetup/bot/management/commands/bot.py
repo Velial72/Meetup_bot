@@ -7,15 +7,18 @@ import time
 import telebot
 from telebot import types
 from dotenv import load_dotenv
+from pathlib import Path
 
 from django.core.management.base import BaseCommand
-from django.conf import settings
-from meetup.bot.models import User, Speaker, Message
+# from django.conf import settings
+# from meetup.bot.models import User, Speaker, Message
 
 load_dotenv()
 token = os.getenv('TELEGRAM_MEETUP_BOT_API_TOKEN')
 bot = telebot.TeleBot(token)
-conn = sqlite3.connect('db.meetup', check_same_thread=False)
+# conn = sqlite3.connect('db.meetup', check_same_thread=False)
+path = Path("meetup", "db.meetup")
+conn = sqlite3.connect(path, check_same_thread=False)
 cursor = conn.cursor()
 params = []
 questions = []
@@ -29,7 +32,7 @@ def now_time(): # выдает текущий час
 
 
 def get_speakers_list(): #выводит список спикеров
-    cursor.execute(f"SELECT user_id FROM speaker")
+    cursor.execute(f"SELECT user_id FROM bot_speaker")
     speakers_name = cursor.fetchall()
     print(10)
     print(speakers_name)
@@ -37,12 +40,12 @@ def get_speakers_list(): #выводит список спикеров
 
 
 def get_timeline(): # выдает боту график мероприятия
-    cursor.execute("SELECT * FROM speaker;")
+    cursor.execute("SELECT * FROM bot_speaker;")
     return cursor.fetchall()
 
 
 def check_meet(speaker_name): #проверяет задержку выступления
-    cursor.execute(f"SELECT delay FROM speaker WHERE user_id == '{speaker_name}'")
+    cursor.execute(f"SELECT delay FROM bot_speaker WHERE user_id == '{speaker_name}'")
     answer = cursor.fetchone()[0]
     print(type(answer))
     print(answer)
@@ -64,14 +67,14 @@ def get_name_visitor(message): # получить данные пользова�
 
 
 def check_user(tg_id): # проверяет записан ли пользователь
-    cursor.execute(f"SELECT tg_id FROM user WHERE tg_id == {tg_id}")
+    cursor.execute(f"SELECT tg_id FROM bot_user WHERE tg_id == {tg_id}")
     data = cursor.fetchone()
     if data is None:
         add_user(tg_id=params[0], name=params[1])
 
 
 def find_speaker(): # находит имя спикера по времени
-    cursor.execute(f"SELECT user_id FROM speaker WHERE start_date == '{now_time()}:00';")
+    cursor.execute(f"SELECT user_id FROM bot_speaker WHERE start_date == '{now_time()}:00';")
     name_of_speaker = cursor.fetchone()
     return name_of_speaker[0]
 
@@ -81,12 +84,12 @@ def get_question(message): # получает вопрос от пользова
     name_visitor = message.from_user.username
     questions.append(question)
     author_of_quastion.append(name_visitor)
-    print(questions)
+    print(type(questions), questions)
     send_question(guest=name_visitor, speaker=find_speaker(), message=questions)
 
 
 def add_user(tg_id: str, name: str): # добавить пользователя в БД
-    cursor.execute('INSERT INTO user(tg_id, name) VALUES (?,?)',
+    cursor.execute('INSERT INTO bot_user(tg_id, name) VALUES (?,?)',
                    (params[0], params[1]))
     conn.commit()
 
@@ -94,18 +97,19 @@ def add_user(tg_id: str, name: str): # добавить пользователя
 def get_my_questions(): # выводит вопросы спикеру
 
     print(find_speaker())
-    cursor.execute(f"SELECT * FROM message WHERE speaker_id == '{find_speaker()}';")
+    cursor.execute(f"SELECT * FROM bot_message WHERE speaker_id == '{find_speaker()}';")
     return cursor.fetchall()
 
 
 def send_question(guest: str, speaker: str, message: str): # добавляет вопрос в БД
-    cursor.execute('INSERT INTO message(guest_id, speaker_id, message) VALUES (?,?,?)',
+    cursor.execute('INSERT INTO bot_message(guest_id, speaker_id, message) VALUES (?,?,?)',
                    (author_of_quastion[-1], find_speaker(), questions[-1]))
     conn.commit()
 
 
 @bot.message_handler(content_types=['text']) # Пришли сообщение чтобы начать
 def start(message):
+    print(message)
     if message.from_user.username == 'AbRamS040':
         markup = types.InlineKeyboardMarkup(row_width=1)
         timeline = types.InlineKeyboardButton('График выступлений', callback_data='timeline2')
@@ -129,7 +133,6 @@ def start(message):
         ask_question=types.InlineKeyboardButton('Задать вопрос', callback_data='ask_question')
         about_bot=types.InlineKeyboardButton('Что я могу', callback_data='about')
         markup.add(timeline, ask_question, about_bot)
-
         sent = bot.send_message(message.chat.id, '\nвыбери нужный пункт', reply_markup=markup)
         get_name_visitor(message)
 
