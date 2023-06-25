@@ -1,1 +1,1 @@
-bot: python meetup/bot/management/commands/bot.py
+worker: python meetup/bot/management/commands/bot.py
